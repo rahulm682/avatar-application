@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
+import logging
 
 from apps.core.cdn import invalidate_email_hashes
 
@@ -55,6 +56,8 @@ from .throttles import (
     SensitiveUserThrottle,
     TokenConfirmThrottle,
 )
+
+logger = logging.getLogger(__name__)
 
 # Messages that are deliberately identical for every case, so responses reveal nothing about accounts.
 SIGNUP_MESSAGE = "Check your email to finish creating your account."
@@ -97,6 +100,7 @@ class RegisterView(PublicView):
 
     @extend_schema(request=RegisterSerializer, responses={202: DetailSerializer}, auth=[])
     def post(self, request):
+        logger.info("Registration request received")
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data["email"]
@@ -117,6 +121,7 @@ class RegisterView(PublicView):
                 mailer.send_registration_notice(email)  # lost a race with another sign-up
             else:
                 mailer.send_verification_email(user)
+        logger.info("Registration request accepted")
         return detail(SIGNUP_MESSAGE, status.HTTP_202_ACCEPTED)
 
 
@@ -130,10 +135,12 @@ class VerifyEmailView(PublicView):
         payload = tokens.read_verification_token(serializer.validated_data["token"])
         user = User.objects.filter(pk=payload["uid"]).first() if payload else None
         if user is None or user.email != payload["email"]:
+            logger.warning("Email verification failed: invalid or expired link")
             return detail(BAD_LINK_MESSAGE, status.HTTP_400_BAD_REQUEST)
         if user.email_verified_at is None:
             user.email_verified_at = timezone.now()
             user.save(update_fields=["email_verified_at", "updated_at"])
+            logger.info("Email verification completed")
         return detail("Email verified. You can log in now.")
 
 
@@ -142,6 +149,7 @@ class ResendVerificationView(PublicView):
 
     @extend_schema(request=EmailSerializer, responses={202: DetailSerializer}, auth=[])
     def post(self, request):
+        logger.info("Verification email resend requested")
         serializer = EmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = User.objects.filter(
@@ -174,10 +182,12 @@ class LoginView(PublicView):
         # Always verify a hash (a dummy one for unknown emails) so timing does not reveal registered emails.
         password_ok = check_password(password, user.password if user else _dummy_password_hash())
         if not (user and password_ok and user.is_active and user.is_email_verified):
+            logger.warning("Login failed: invalid credentials or account not eligible")
             # Same answer for: unknown email, wrong password, and unverified account.
             return detail(BAD_LOGIN_MESSAGE, status.HTTP_401_UNAUTHORIZED)
 
         access, refresh = issue_tokens(user)
+        logger.info("Login successful for user_id=%s", user.pk)
         response = Response({"access": access, "user": ProfileSerializer(user).data})
         set_refresh_cookie(response, refresh)
         return response
@@ -197,21 +207,25 @@ class RefreshView(PublicView):
         require_trusted_origin(request)
         raw_token = request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
         if not raw_token:
+            logger.debug("Token refresh rejected: refresh cookie missing")
             return detail("Not logged in.", status.HTTP_401_UNAUTHORIZED)
 
         try:
             old_refresh = RefreshToken(raw_token)  # checks signature, expiry and the blacklist
             user = User.objects.filter(pk=old_refresh[jwt_settings.USER_ID_CLAIM]).first()
         except TokenError:
+            logger.info("Token refresh rejected: invalid refresh token")
             return _logged_out_response()
 
         if user is None or not user.is_active or not user.is_email_verified:
+            logger.info("Token refresh rejected: account unavailable or ineligible")
             return _logged_out_response()
 
         access, new_refresh = issue_tokens(user)
         old_refresh.blacklist()  # rotation: each refresh token works exactly once
         response = Response({"access": access})
         set_refresh_cookie(response, new_refresh)
+        logger.debug("Refresh token rotated successfully for user_id=%s", user.pk)
         return response
 
 
@@ -229,6 +243,7 @@ class LogoutView(PublicView):
                 pass  # already invalid: nothing to revoke
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_refresh_cookie(response)
+        logger.debug("Logout completed")
         return response
 
 
@@ -246,6 +261,7 @@ class PasswordResetRequestView(PublicView):
 
     @extend_schema(request=EmailSerializer, responses={202: DetailSerializer}, auth=[])
     def post(self, request):
+        logger.info("Password reset request received")
         serializer = EmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = User.objects.filter(email=serializer.validated_data["email"]).first()
@@ -269,6 +285,7 @@ class PasswordResetConfirmView(PublicView):
 
         user = tokens.user_from_uid(data["uid"])
         if user is None or not tokens.check_password_reset_token(user, data["token"]):
+            logger.warning("Password reset confirmation failed: invalid or expired link")
             return detail(BAD_LINK_MESSAGE, status.HTTP_400_BAD_REQUEST)
 
         errors = _password_errors(data["new_password"], user)
@@ -278,6 +295,7 @@ class PasswordResetConfirmView(PublicView):
         user.set_password(data["new_password"])
         user.save(update_fields=["password", "updated_at"])
         revoke_all_refresh_tokens(user)  # every device must log in again
+        logger.info("Password reset completed for user_id=%s", user.pk)
         return detail("Password updated. You can log in now.")
 
 
@@ -296,6 +314,10 @@ class ChangePasswordView(APIView):
         user = request.user
 
         if not user.check_password(data["current_password"]):
+            logger.warning(
+                "Password change rejected: incorrect current password for user_id=%s",
+                user.pk,
+            )
             return detail("Current password is incorrect.", status.HTTP_400_BAD_REQUEST)
         errors = _password_errors(data["new_password"], user)
         if errors:
@@ -306,6 +328,7 @@ class ChangePasswordView(APIView):
         revoke_all_refresh_tokens(user)
 
         access, refresh = issue_tokens(user)
+        logger.info("Password changed successfully for user_id=%s", user.pk)
         response = Response({"access": access})
         set_refresh_cookie(response, refresh)
         return response
@@ -325,6 +348,10 @@ class EmailChangeRequestView(APIView):
         user = request.user
 
         if not user.check_password(serializer.validated_data["password"]):
+            logger.warning(
+                "Email change rejected: incorrect password for user_id=%s",
+                user.pk,
+            )
             return detail("Password is incorrect.", status.HTTP_400_BAD_REQUEST)
         if new_email == user.email:
             return detail("That is already your email address.", status.HTTP_400_BAD_REQUEST)
@@ -335,6 +362,7 @@ class EmailChangeRequestView(APIView):
             mailer.send_email_in_use_notice(new_email)
         else:
             mailer.send_email_change_email(user, new_email)
+            logger.info("Email change confirmation requested for user_id=%s", user.pk)
         return detail(EMAIL_CHANGE_MESSAGE, status.HTTP_202_ACCEPTED)
 
 
@@ -349,6 +377,7 @@ class EmailChangeConfirmView(PublicView):
         user = User.objects.filter(pk=payload["uid"]).first() if payload else None
         # The link only works while the account still has the email it was issued for.
         if user is None or user.email_hash != payload["old_email_hash"]:
+            logger.warning("Email change confirmation failed: invalid or stale link")
             return detail(BAD_LINK_MESSAGE, status.HTTP_400_BAD_REQUEST)
 
         new_email = payload["new_email"]
@@ -364,9 +393,11 @@ class EmailChangeConfirmView(PublicView):
                 user.email_verified_at = timezone.now()  # clicking the link proves ownership of the new address
                 user.save()  # recomputes email_hash
         except IntegrityError:
+            logger.info("Email change confirmation rejected: email conflict")
             return detail(BAD_LINK_MESSAGE, status.HTTP_400_BAD_REQUEST)
 
         invalidate_email_hashes(old_hash, user.email_hash)
+        logger.info("Email address changed successfully for user_id=%s", user.pk)
         return detail("Email address updated.")
 
 
@@ -386,6 +417,7 @@ class MeView(APIView):
         serializer = ProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        logger.info("User profile updated for user_id=%s", request.user.pk)
         return Response(serializer.data)
 
     @extend_schema(request=DeleteAccountSerializer, responses={204: None, 400: DetailSerializer})
@@ -397,7 +429,7 @@ class MeView(APIView):
             return detail("Password is incorrect.", status.HTTP_400_BAD_REQUEST)
 
         soft_delete_user(user)  # hidden at once; permanently removed after the retention period
-
+        logger.info("Account soft-deleted for user_id=%s", user.pk)
         response = Response(status=status.HTTP_204_NO_CONTENT)
         clear_refresh_cookie(response)
         return response

@@ -73,7 +73,11 @@ def avatar_bytes(avatar, size):
     try:
         storage.put_object(derived, data, "image/webp")
     except Exception:  # noqa: BLE001 - still serve the image; the next request will try again
-        logger.exception("Could not store derived image %s", derived)
+        logger.exception(
+            "Could not store derived avatar image for avatar_id=%s size=%s",
+            avatar.pk,
+            size,
+        )
     return data
 
 

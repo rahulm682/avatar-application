@@ -1,5 +1,6 @@
 """Avatar management endpoints (design doc, section 7). All require a logged-in user."""
 import uuid
+import logging
 
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
@@ -22,6 +23,8 @@ from .serializers import (
 )
 from .throttles import ConfirmThrottle, ManageThrottle, UploadUrlThrottle
 
+logger = logging.getLogger(__name__)
+
 NOT_FOUND = "Picture not found."
 BAD_UPLOAD = "This upload is invalid or has expired. Please upload the file again."
 
@@ -43,11 +46,16 @@ class UploadUrlView(APIView):
         serializer = UploadUrlRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if services.avatar_count(request.user) >= settings.AVATAR_MAX_PER_USER:
+            logger.info(
+                "Avatar upload limit reached for user_id=%s",
+                request.user.pk,
+            )
             return _detail(services.limit_message(), status.HTTP_400_BAD_REQUEST)
 
         key, post = storage.create_presigned_upload(
             request.user.pk, uuid.uuid4(), serializer.validated_data["content_type"]
         )
+        logger.info("Avatar upload initiated for user_id=%s", request.user.pk)
         return Response(
             {
                 "url": post["url"],
@@ -76,15 +84,27 @@ class ConfirmUploadView(APIView):
         payload = services.read_upload_token(serializer.validated_data["upload_token"])
         own_prefix = f"uploads/{request.user.pk}/"
         if payload is None or payload["uid"] != str(request.user.pk) or not payload["key"].startswith(own_prefix):
+            logger.info("Avatar upload confirmation rejected for user_id=%s", request.user.pk)
             return _detail(BAD_UPLOAD, status.HTTP_400_BAD_REQUEST)
 
         try:
             avatar, created = services.confirm_upload(request.user, payload["key"])
         except services.AvatarError as exc:
+            logger.info(
+                "Avatar upload confirmation failed for user_id=%s status=%s",
+                request.user.pk,
+                exc.status_code,
+            )
             return _detail(exc.message, exc.status_code)
 
         request.user.refresh_from_db(fields=["current_avatar"])
         data = AvatarSerializer(avatar, context={"current_avatar_id": request.user.current_avatar_id}).data
+        logger.info(
+            "Avatar upload confirmed for user_id=%s avatar_id=%s created=%s",
+            request.user.pk,
+            avatar.pk,
+            created,
+        )
         return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
@@ -111,6 +131,11 @@ class AvatarDetailView(APIView):
         if avatar is None:
             return _detail(NOT_FOUND, status.HTTP_404_NOT_FOUND)
         services.delete_avatar(avatar)
+        logger.info(
+            "Avatar deleted for user_id=%s avatar_id=%s",
+            request.user.pk,
+            avatar.pk,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -131,7 +156,16 @@ class CurrentAvatarView(APIView):
         if avatar_id is not None:
             avatar = Avatar.objects.filter(pk=avatar_id, user=request.user).first()
             if avatar is None:
+                logger.info(
+                    "Current avatar update rejected: avatar not found for user_id=%s",
+                    request.user.pk,
+                )
                 return _detail(NOT_FOUND, status.HTTP_404_NOT_FOUND)
 
         services.set_current_avatar(request.user, avatar)
+        logger.info(
+            "Current avatar updated for user_id=%s avatar_id=%s",
+            request.user.pk,
+            avatar.pk if avatar is not None else None,
+        )
         return Response({"current_avatar_id": request.user.current_avatar_id})

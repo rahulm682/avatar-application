@@ -1,8 +1,11 @@
 """S3 client helpers. Works against Silo locally and AWS S3 later; only settings differ."""
+import logging
+
 import boto3
 from botocore.config import Config
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
 
 def _config():
     return Config(
@@ -38,4 +41,8 @@ def check_bucket():
         get_s3_client().head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
         return "ok"
     except Exception as exc:  # noqa: BLE001 - report any failure as text
+        logger.warning(
+            "S3 bucket health check failed: error_type=%s",
+            type(exc).__name__,
+        )
         return f"error: {exc.__class__.__name__} (did you run 'make setup'?)"

@@ -164,6 +164,11 @@ def restore_avatar(avatar):
     avatar.is_deleted = False
     avatar.deleted_at = None
     avatar.save(update_fields=["is_deleted", "deleted_at"])
+    logger.info(
+        "Avatar restored for user_id=%s avatar_id=%s",
+        user.pk,
+        avatar.pk,
+    )
 
 
 def purge_avatar(avatar):
@@ -187,4 +192,7 @@ def delete_all_files_for_user(user):
         storage.delete_prefix(f"originals/{user.pk}/")
         storage.delete_prefix(f"uploads/{user.pk}/")
     except Exception:  # noqa: BLE001
-        logger.exception("Could not delete all files for user %s", user.pk)
+        logger.exception(
+            "Failed to delete all avatar files for user_id=%s",
+            user.pk,
+        )
