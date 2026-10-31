@@ -1,0 +1,637 @@
+/* Design tokens. Marigold is reserved for ONE meaning: "this is the current picture". */
+:root {
+  --ink: #16222c;
+  --ink-soft: #4b5b66;
+  --paper: #edf0ec;
+  --surface: #fafbf9;
+  --line: #c9d1ca;
+  --teal: #1f6f6b;
+  --teal-hover: #195a57;
+  --on-teal: #ffffff;
+  --marigold: #f0b429;
+  --on-marigold: #1b1606;
+  --danger: #b3261e;
+  --danger-wash: #fbe9e7;
+  --success: #1d6b3a;
+  --success-wash: #e4f3e8;
+  --info-wash: #e2eef0;
+  --focus: #1f6f6b;
+
+  --font-display:
+    "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6ece9;
+    --ink-soft: #9db0ba;
+    --paper: #10171c;
+    --surface: #172027;
+    --line: #2b3943;
+    --teal: #58b8ad;
+    --teal-hover: #74cbc0;
+    --on-teal: #07201d;
+    --danger: #ff8f85;
+    --danger-wash: #35201e;
+    --success: #7fd29a;
+    --success-wash: #1a2e22;
+    --info-wash: #182a2e;
+    --focus: #74cbc0;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 106.25%; /* 17px base */
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 4.5vw, 2.9rem);
+}
+
+h2 {
+  font-size: 1.4rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+p {
+  margin: 0;
+  max-width: 62ch;
+}
+
+a {
+  color: var(--teal);
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  color: var(--teal-hover);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- shell ---------- */
+.shell {
+  width: min(1040px, 100% - 2.5rem);
+  margin-inline: auto;
+}
+
+.topbar {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.topbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.6rem;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.nav a,
+.nav button {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.nav a:hover,
+.nav button:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.nav a[aria-current="page"] {
+  color: var(--ink);
+  box-shadow: inset 0 -2px 0 var(--marigold);
+  border-radius: 0;
+}
+
+.page {
+  padding-block: 2.5rem 4rem;
+}
+
+.page > * + * {
+  margin-top: 2rem;
+}
+
+.lede {
+  color: var(--ink-soft);
+  margin-top: 0.6rem;
+}
+
+/* ---------- forms ---------- */
+.form {
+  display: grid;
+  gap: 1.1rem;
+  max-width: 26rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field__password {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.field__hint {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.field__errors {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  color: var(--danger);
+}
+
+.checkbox {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.95rem;
+}
+
+.checkbox input {
+  margin-top: 0.3rem;
+  accent-color: var(--teal);
+}
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--teal);
+  color: var(--on-teal);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--teal-hover);
+  color: var(--on-teal);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+}
+
+.btn--danger {
+  background: var(--surface);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--danger-wash);
+}
+
+.btn--danger-solid {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.btn--text {
+  padding: 0.4rem 0.6rem;
+  background: none;
+  color: var(--teal);
+  font-weight: 500;
+}
+
+.btn--small {
+  padding: 0.4rem 0.7rem;
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* ---------- messages ---------- */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border-left: 4px solid;
+  max-width: 40rem;
+}
+
+.alert--error {
+  background: var(--danger-wash);
+  border-color: var(--danger);
+}
+
+.alert--success {
+  background: var(--success-wash);
+  border-color: var(--success);
+}
+
+.alert--info {
+  background: var(--info-wash);
+  border-color: var(--teal);
+}
+
+/* ---------- sign-in pages ---------- */
+.auth {
+  display: grid;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+@media (min-width: 880px) {
+  .auth {
+    grid-template-columns: 1fr 26rem;
+    gap: 4.5rem;
+  }
+}
+
+.auth__intro {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.auth__main {
+  display: grid;
+  gap: 1.4rem;
+}
+
+.auth__links {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.identicons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.identicons img {
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+
+/* ---------- pictures ---------- */
+.stage {
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (min-width: 820px) {
+  .stage {
+    grid-template-columns: 11rem 1fr;
+    gap: 3rem;
+  }
+}
+
+/* Grid items default to min-width:auto, which lets the long no-wrap code snippet widen the page on phones. */
+.stage > * {
+  min-width: 0;
+}
+
+.frame {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame--current {
+  box-shadow: 0 0 0 4px var(--marigold);
+}
+
+.tag {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--marigold);
+  color: var(--on-marigold);
+}
+
+.stage__frame {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 11rem;
+}
+
+.stage__frame .btn--text {
+  justify-self: start;
+  padding-left: 0;
+}
+
+.sizes {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.sizes figure {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+}
+
+.sizes img {
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.sizes figcaption {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.snippet {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+  margin-top: 1.2rem;
+  max-width: 44rem;
+}
+
+.snippet code {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.small {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 1.4rem 1.2rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.picture {
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+}
+
+.picture__meta {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.picture__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tile-add {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-content: center;
+  gap: 0.3rem;
+  padding: 0.8rem;
+  text-align: left;
+  border: 2px dashed var(--ink-soft);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.tile-add:hover,
+.tile-add.is-dragging {
+  border-color: var(--teal);
+  background: var(--info-wash);
+}
+
+.tile-add:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tile-add.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.tile-add strong {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.progress {
+  height: 6px;
+  margin-top: 0.4rem;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress > div {
+  height: 100%;
+  background: var(--teal);
+}
+
+.empty {
+  color: var(--ink-soft);
+}
+
+/* ---------- account page ---------- */
+.sections {
+  display: grid;
+  gap: 3rem;
+}
+
+.section {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--line);
+}
+
+.section--danger h2 {
+  color: var(--danger);
+}
+
+.identity {
+  display: flex;
+  gap: 1.1rem;
+  align-items: center;
+}
+
+.identity img {
+  border-radius: 3px;
+  background: var(--line);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn,
+  .tile-add {
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease;
+  }
+}
