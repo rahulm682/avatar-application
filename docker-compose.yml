@@ -45,7 +45,7 @@ services:
       retries: 10
 
   silo:
-    image: ${SILO_IMAGE:-pgsty/silo:latest}
+    image: pgsty/silo:RELEASE.2026-10-26T00-00-00Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${SILO_ROOT_USER:-silo-admin}
@@ -113,7 +113,7 @@ services:
 
   # Local CDN. The VCL file contains a placeholder for the origin secret, which is substituted at start-up.
   varnish:
-    image: varnish:stable
+    image: varnish:9.1.0
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
