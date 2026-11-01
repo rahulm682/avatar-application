@@ -3,8 +3,6 @@
 A Gravatar-like service (learning project). Users register with a verified email, upload several
 pictures, and choose one as the current avatar. Other apps fetch it by the SHA-256 hash of the email.
 
-Full design: [`docs/avatar-service-design.md`](docs/avatar-service-design.md)
-
 **Current status: Part A of the roadmap is complete** (infrastructure, accounts and authentication, avatar upload and
 management, the public `/avatar/{email_hash}` endpoint, automatic CDN invalidation, the React frontend, and reports
 with admin moderation, and soft delete). Planned next: Part B (hosting and AWS).
@@ -25,8 +23,7 @@ make superuser                # an admin who can log in right away
 make test
 ```
 
-`make setup` can be re-run safely. Expect every line of the smoke test to say `PASS` (a `WARN` about CORS is
-explained in the design doc, section 13.6).
+`make setup` can be re-run safely. Expect every line of the smoke test to say `PASS`.
 
 ## Where things run
 
@@ -138,11 +135,3 @@ backend/            Django project (apps: core, accounts, avatars, moderation)
 frontend/           React + Vite app (sign-up, log-in, account and picture manager)
 docs/               Design document
 ```
-
-## Notes
-
-- This is for **local development only**. All credentials in `.env.example` are throwaway values. Never commit `.env`.
-- Silo is a community fork of MinIO. Pin a specific image tag in `.env` (`SILO_IMAGE`) once you choose one.
-- The backend container never receives the Silo root credentials; it uses its own restricted access key.
-- Rate-limit counters live in memory and reset when the backend restarts (and are per process, so a multi-worker
-  hosted setup needs a shared cache; see the design doc).
