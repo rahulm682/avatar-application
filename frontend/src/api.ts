@@ -1,4 +1,4 @@
-// Everything the frontend knows about the backend API (design doc, sections 6 and 7).
+// Everything the frontend knows about the backend API.
 //
 // Sessions: the access token lives ONLY in this module's memory. The refresh token is an httpOnly cookie that
 // scripts cannot read; the browser attaches it when we call /auth/refresh/ with credentials: "include".

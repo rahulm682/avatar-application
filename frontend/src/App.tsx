@@ -73,7 +73,7 @@ function NotFound() {
       <h1>Page not found</h1>
       <p className="lede">
         There is nothing at this address.{" "}
-        <Link to="/">Go to the start page</Link>.
+        <Link to="/">Go to the Home page</Link>.
       </p>
     </div>
   );

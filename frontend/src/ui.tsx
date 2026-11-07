@@ -172,6 +172,7 @@ export function SubmitButton({
   );
 }
 
+// Some default icons that are displayed on login and register page
 // Real identicons from this app's own public endpoint (the hashes are SHA-256 of these sample addresses).
 const SAMPLE_HASHES = [
   "b5fc85e55755f9e0d030a10ab4429b6b2944855f9a0d60077fe832becbc41d72",
