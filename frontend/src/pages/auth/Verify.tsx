@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { api } from "../api";
-import { useAuth } from "../auth";
-import { Alert, TextField, errorText, useDocumentTitle } from "../ui";
+import { api } from "../../api";
+import { useAuth } from "../../auth";
+import { Alert, TextField, errorText, useDocumentTitle } from "../../ui";
 
-/** Shown after sign-up: "check your inbox", with a way to send the link again. */
+/**
+ * Shown after sign-up: "check your inbox", with a way to send the link again.
+ */
 export function CheckEmail() {
   useDocumentTitle("Check your email");
+
   const [params] = useSearchParams();
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [message, setMessage] = useState<{
@@ -20,20 +23,35 @@ export function CheckEmail() {
 
   useEffect(() => {
     if (cooldown <= 0) return;
-    const timer = window.setTimeout(() => setCooldown(cooldown - 1), 1000);
+
+    const timer = window.setTimeout(
+      () => setCooldown(cooldown - 1),
+      1000,
+    );
+
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+
     setBusy(true);
     setMessage(null);
+
     try {
       const result = await api.resendVerification(email);
-      setMessage({ kind: "success", text: result.detail });
+
+      setMessage({
+        kind: "success",
+        text: result.detail,
+      });
+
       setCooldown(60);
     } catch (e) {
-      setMessage({ kind: "error", text: errorText(e) });
+      setMessage({
+        kind: "error",
+        text: errorText(e),
+      });
     } finally {
       setBusy(false);
     }
@@ -43,6 +61,7 @@ export function CheckEmail() {
     <div className="shell page">
       <div>
         <h1>Check your email</h1>
+
         <p className="lede">
           {params.get("email") ? (
             <>
@@ -55,9 +74,12 @@ export function CheckEmail() {
           )}
         </p>
       </div>
+
       <form className="form" onSubmit={onSubmit}>
         <h2>Send the link again</h2>
+
         {message && <Alert kind={message.kind}>{message.text}</Alert>}
+
         <TextField
           label="Email"
           type="email"
@@ -66,6 +88,7 @@ export function CheckEmail() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+
         <div className="actions">
           <button
             type="submit"
@@ -78,6 +101,7 @@ export function CheckEmail() {
                 ? `Send again in ${cooldown}s`
                 : "Send the link again"}
           </button>
+
           <Link to="/login">Back to log in</Link>
         </div>
       </form>
@@ -87,18 +111,28 @@ export function CheckEmail() {
 
 type LinkState = "working" | "done" | "failed";
 
-/** Opened from the link in the confirmation email: /verify-email?token=... */
+/**
+ * Opened from the link in the confirmation email:
+ * /verify-email?token=...
+ */
 export function VerifyEmail() {
   useDocumentTitle("Confirm email");
+
   const [params] = useSearchParams();
   const token = params.get("token");
-  const [state, setState] = useState<LinkState>(token ? "working" : "failed");
+
+  const [state, setState] = useState<LinkState>(
+    token ? "working" : "failed",
+  );
   const [message, setMessage] = useState("");
   const started = useRef(false);
 
   useEffect(() => {
     if (!token || started.current) return;
-    started.current = true; // React's development mode runs effects twice; confirm only once
+
+    // React's development mode runs effects twice; confirm only once.
+    started.current = true;
+
     api
       .verifyEmail(token)
       .then((result) => {
@@ -114,10 +148,13 @@ export function VerifyEmail() {
   return (
     <div className="shell page">
       {state === "working" && <h1>Confirming your email...</h1>}
+
       {state === "done" && (
         <>
           <h1>Email confirmed</h1>
+
           <p className="lede">{message}</p>
+
           <div className="actions">
             <Link className="btn btn--primary" to="/login">
               Log in
@@ -125,15 +162,18 @@ export function VerifyEmail() {
           </div>
         </>
       )}
+
       {state === "failed" && (
         <>
           <h1>This link did not work</h1>
+
           <p className="lede">
             {token
               ? message ||
                 "It may have expired, or it was already replaced by a newer one."
               : "The link is incomplete."}
           </p>
+
           <div className="actions">
             <Link className="btn btn--primary" to="/check-email">
               Get a new link
@@ -145,24 +185,38 @@ export function VerifyEmail() {
   );
 }
 
-/** Opened from the link sent to the NEW address: /confirm-email-change?token=... */
+/**
+ * Opened from the link sent to the NEW address:
+ * /confirm-email-change?token=...
+ */
 export function ConfirmEmailChange() {
   useDocumentTitle("Confirm new email");
+
   const [params] = useSearchParams();
   const token = params.get("token");
+
   const { status, reloadUser } = useAuth();
-  const [state, setState] = useState<LinkState>(token ? "working" : "failed");
+
+  const [state, setState] = useState<LinkState>(
+    token ? "working" : "failed",
+  );
   const [message, setMessage] = useState("");
   const started = useRef(false);
 
   useEffect(() => {
     if (!token || status === "loading" || started.current) return;
+
     started.current = true;
+
     api
       .confirmEmailChange(token)
       .then(async (result) => {
         setMessage(result.detail);
-        if (status === "authenticated") await reloadUser();
+
+        if (status === "authenticated") {
+          await reloadUser();
+        }
+
         setState("done");
       })
       .catch((e) => {
@@ -174,14 +228,17 @@ export function ConfirmEmailChange() {
   return (
     <div className="shell page">
       {state === "working" && <h1>Confirming your new email...</h1>}
+
       {state === "done" && (
         <>
           <h1>Email updated</h1>
+
           <p className="lede">
             {message} The public picture address is built from your email, so it
             changed with it. Apps that saved the old address will show the
             default picture.
           </p>
+
           <div className="actions">
             <Link
               className="btn btn--primary"
@@ -192,15 +249,18 @@ export function ConfirmEmailChange() {
           </div>
         </>
       )}
+
       {state === "failed" && (
         <>
           <h1>This link did not work</h1>
+
           <p className="lede">
             {token
               ? message || "It may have expired or was already used."
               : "The link is incomplete."}{" "}
             Start the change again from your account page.
           </p>
+
           <div className="actions">
             <Link className="btn btn--primary" to="/account">
               Go to your account

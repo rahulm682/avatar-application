@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../auth";
+import { useAuth } from "../../auth";
 import {
   Alert,
   IdenticonRow,
@@ -11,13 +11,15 @@ import {
   TextField,
   errorText,
   useDocumentTitle,
-} from "../ui";
+} from "../../ui";
 
 export default function Login() {
   useDocumentTitle("Log in");
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const from =
     (location.state as { from?: string } | null)?.from ?? "/pictures";
 
@@ -28,8 +30,10 @@ export default function Login() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+
     setBusy(true);
     setError(null);
+
     try {
       await login(email, password);
       navigate(from, { replace: true });
@@ -44,14 +48,18 @@ export default function Login() {
     <div className="shell page auth">
       <div className="auth__intro">
         <IdenticonRow />
+
         <h1>Log in</h1>
+
         <p className="lede">
           Manage the pictures that follow you from app to app.
         </p>
       </div>
+
       <div className="auth__main">
         <form className="form" onSubmit={onSubmit}>
           {error && <Alert kind="error">{error}</Alert>}
+
           <TextField
             label="Email"
             type="email"
@@ -60,6 +68,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+
           <PasswordField
             label="Password"
             autoComplete="current-password"
@@ -67,17 +76,21 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
           <div className="actions">
             <SubmitButton busy={busy} busyLabel="Logging in...">
               Log in
             </SubmitButton>
           </div>
         </form>
+
         <div className="auth__links">
           <Link to="/forgot-password">Forgot your password?</Link>
+
           <Link to={`/check-email?email=${encodeURIComponent(email)}`}>
             Did not get the confirmation email?
           </Link>
+
           <span>
             New here? <Link to="/register">Create an account</Link>
           </span>

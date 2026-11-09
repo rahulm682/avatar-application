@@ -2,16 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { ChangeEvent, DragEvent } from "react";
 
-import { AVATAR_BASE_URL, api, avatarUrl, uploadToStorage } from "../api";
-import type { Picture } from "../api";
-import { useAuth } from "../auth";
-import { Alert, errorText, useDocumentTitle } from "../ui";
+import { AVATAR_BASE_URL, api, avatarUrl, uploadToStorage } from "../../api";
+import type { Picture } from "../../api";
+import { useAuth } from "../../auth";
+import { Alert, errorText, useDocumentTitle } from "../../ui";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024;
 const SERVED_SIZES = [40, 80, 160, 320]; // the 640 px size exists too; it is just too large to show here
 
 type Notice = { kind: "success" | "error"; text: string } | null;
+
 interface UploadState {
   name: string;
   progress: number;
@@ -21,7 +22,9 @@ interface UploadState {
 function checkFile(file: File): string | null {
   if (!ACCEPTED_TYPES.includes(file.type))
     return "Choose a PNG, JPEG or WebP picture.";
+
   if (file.size > MAX_BYTES) return "That file is larger than 5 MB.";
+
   return null;
 }
 
@@ -48,6 +51,7 @@ function Stage({
   busy: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+
   const snippet = `<img src="${avatarUrl(emailHash, 160)}" width="80" height="80" alt="">`;
 
   async function copy() {
@@ -75,6 +79,7 @@ function Stage({
             />
             {current && <span className="tag">Current</span>}
           </div>
+
           {current ? (
             <button
               type="button"
@@ -93,9 +98,11 @@ function Stage({
 
         <div>
           <h2 id="current-heading">What other apps receive</h2>
+
           <p className="lede">
             The same picture, fetched from the CDN at the sizes it serves.
           </p>
+
           <div className="sizes">
             {SERVED_SIZES.map((size) => (
               <figure key={size}>
@@ -109,8 +116,10 @@ function Stage({
               </figure>
             ))}
           </div>
+
           <div className="snippet">
             <code aria-label="HTML for showing this picture">{snippet}</code>
+
             <button
               type="button"
               className="btn btn--secondary btn--small"
@@ -119,6 +128,7 @@ function Stage({
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
+
           <p className="small" style={{ marginTop: "0.8rem" }}>
             Any app can build this address from your email: lowercase it, take
             its SHA-256, and put the result after{" "}
@@ -133,8 +143,10 @@ function Stage({
 
 export default function Pictures() {
   useDocumentTitle("Your pictures");
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
   const list = useQuery({
     queryKey: ["pictures"],
     queryFn: () => api.listPictures(),
@@ -153,6 +165,7 @@ export default function Pictures() {
 
   const setCurrent = useMutation({
     mutationFn: (id: string | null) => api.setCurrentPicture(id),
+
     onSuccess: async (_data, id) => {
       setNotice({
         kind: "success",
@@ -160,38 +173,58 @@ export default function Pictures() {
           ? "That picture is now your current one."
           : "You are using the default picture.",
       });
+
       await afterChange();
     },
+
     onError: (e) => setNotice({ kind: "error", text: errorText(e) }),
   });
 
   const remove = useMutation({
     mutationFn: (id: string) => api.deletePicture(id),
+
     onSuccess: async () => {
       setConfirmingDelete(null);
       setNotice({ kind: "success", text: "Picture deleted." });
+
       await afterChange();
     },
+
     onError: (e) => setNotice({ kind: "error", text: errorText(e) }),
   });
 
   async function handleFile(file: File) {
     setNotice(null);
+
     const problem = checkFile(file);
+
     if (problem) {
       setNotice({ kind: "error", text: problem });
       return;
     }
+
     setUpload({ name: file.name, progress: 0, phase: "uploading" });
+
     try {
-      // 1. ask the API for a presigned upload, 2. send the file straight to storage, 3. let the API check and register it
+      // 1. ask the API for a presigned upload,
+      // 2. send the file straight to storage,
+      // 3. let the API check and register it
       const ticket = await api.getUploadTicket(file.type, file.size);
+
       await uploadToStorage(ticket, file, (fraction) =>
-        setUpload({ name: file.name, progress: fraction, phase: "uploading" }),
+        setUpload({
+          name: file.name,
+          progress: fraction,
+          phase: "uploading",
+        }),
       );
+
       setUpload({ name: file.name, progress: 1, phase: "processing" });
+
       const { picture, created } = await api.confirmUpload(ticket.upload_token);
+
       await afterChange();
+
       setNotice({
         kind: "success",
         text: !created
@@ -209,18 +242,23 @@ export default function Pictures() {
 
   function onPick(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+
     event.target.value = ""; // so choosing the same file again still triggers a change
+
     if (file) void handleFile(file);
   }
 
   function onDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     setDragging(false);
+
     const file = event.dataTransfer.files[0];
+
     if (file && upload === null) void handleFile(file);
   }
 
   if (!user) return null;
+
   const pictures = list.data?.results ?? [];
   const max = list.data?.max_avatars ?? 10;
   const current = pictures.find((picture) => picture.is_current);
@@ -231,6 +269,7 @@ export default function Pictures() {
     <div className="shell page">
       <div>
         <h1>Your pictures</h1>
+
         <p className="lede">
           The picture marked as current is what other apps show for {user.email}
           .
@@ -248,6 +287,7 @@ export default function Pictures() {
       <section aria-labelledby="gallery-heading">
         <div className="section-head">
           <h2 id="gallery-heading">All pictures</h2>
+
           {list.data && (
             <span className="small">
               {pictures.length} of {max}
@@ -256,6 +296,7 @@ export default function Pictures() {
         </div>
 
         {notice && <Alert kind={notice.kind}>{notice.text}</Alert>}
+
         {list.isError && (
           <Alert kind="error">
             {errorText(list.error)}{" "}
@@ -268,6 +309,7 @@ export default function Pictures() {
             </button>
           </Alert>
         )}
+
         {list.isPending && <p className="small">Loading your pictures...</p>}
 
         {list.data && (
@@ -277,6 +319,7 @@ export default function Pictures() {
                 className={`tile-add${dragging ? " is-dragging" : ""}${addDisabled ? " is-disabled" : ""}`}
                 onDragOver={(event) => {
                   event.preventDefault();
+
                   if (!addDisabled) setDragging(true);
                 }}
                 onDragLeave={() => setDragging(false)}
@@ -289,6 +332,7 @@ export default function Pictures() {
                   disabled={addDisabled}
                   onChange={onPick}
                 />
+
                 {upload ? (
                   <>
                     <strong>
@@ -296,7 +340,9 @@ export default function Pictures() {
                         ? "Uploading..."
                         : "Checking the picture..."}
                     </strong>
+
                     <span className="small">{upload.name}</span>
+
                     <div
                       className="progress"
                       role="progressbar"
@@ -314,6 +360,7 @@ export default function Pictures() {
                 ) : limitReached ? (
                   <>
                     <strong>Limit reached</strong>
+
                     <span className="small">
                       Delete a picture to add another.
                     </span>
@@ -321,6 +368,7 @@ export default function Pictures() {
                 ) : (
                   <>
                     <strong>Add a picture</strong>
+
                     <span className="small">
                       Drop a file here or choose one. PNG, JPEG or WebP, up to 5
                       MB.
@@ -342,12 +390,15 @@ export default function Pictures() {
                     alt={`Picture added ${formatDate(picture.created_at)}`}
                     loading="lazy"
                   />
+
                   {picture.is_current && <span className="tag">Current</span>}
                 </div>
+
                 <p className="picture__meta">
                   {picture.width} x {picture.height}, added{" "}
                   {formatDate(picture.created_at)}
                 </p>
+
                 <div className="picture__actions">
                   {!picture.is_current && (
                     <button
@@ -359,6 +410,7 @@ export default function Pictures() {
                       Use as current
                     </button>
                   )}
+
                   {confirmingDelete === picture.id ? (
                     <>
                       <button
@@ -369,6 +421,7 @@ export default function Pictures() {
                       >
                         Delete picture
                       </button>
+
                       <button
                         type="button"
                         className="btn btn--text btn--small"
