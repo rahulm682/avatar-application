@@ -1,0 +1,10 @@
+name: avatar-service
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  pg_data:
+  silo_data:
+  static_data:

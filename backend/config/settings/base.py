@@ -88,7 +88,7 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ---------------------------------------------------------------------------
-# Users and passwords (design doc, section 6)
+# Users and passwords
 # ---------------------------------------------------------------------------
 AUTH_USER_MODEL = "accounts.User"
 
@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    # Rate limits (design doc, section 11). Counters live in Django's cache; the default in-memory cache is
+    # Rate limits. Counters live in Django's cache; the default in-memory cache is
     # per process, so for several Gunicorn workers switch to a shared cache (database cache or Redis).
     "DEFAULT_THROTTLE_RATES": {
         "register": "5/hour",
@@ -165,23 +165,23 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
 }
 
-# The refresh token travels only in an httpOnly cookie (design doc, section 6.1).
+# The refresh token travels only in an httpOnly cookie.
 # SECURE and SAMESITE differ per environment, so they are set in dev.py and prod.py.
 REFRESH_COOKIE_NAME = os.environ.get("REFRESH_COOKIE_NAME", "refresh_token")
 REFRESH_COOKIE_PATH = os.environ.get("REFRESH_COOKIE_PATH", "/api/auth/")
 REFRESH_COOKIE_MAX_AGE = int(SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds())
 
 # ---------------------------------------------------------------------------
-# CORS and CSRF (design doc, section 10): exact origins, credentials allowed for the refresh cookie
+# CORS and CSRF: exact origins, credentials allowed for the refresh cookie
 # ---------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:8080")
 CORS_ALLOW_CREDENTIALS = True
 CORS_URLS_REGEX = r"^/api/.*$"
 CORS_PREFLIGHT_MAX_AGE = 600
 CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 # ---------------------------------------------------------------------------
-# Origin lock (design doc, section 9.5): /avatar/* only accepted via the CDN. Empty = disabled.
+# Origin lock: /avatar/* only accepted via the CDN. Empty = disabled.
 # ---------------------------------------------------------------------------
 ORIGIN_VERIFY_SECRET = os.environ.get("ORIGIN_VERIFY_SECRET", "")
 
@@ -197,7 +197,7 @@ AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
 
 # ---------------------------------------------------------------------------
-# Avatars (design doc, sections 8 and 9). Used from Step 4 onwards.
+# Avatars
 # ---------------------------------------------------------------------------
 AVATAR_SIZES = (40, 80, 160, 320, 640)
 AVATAR_DEFAULT_SIZE = 80
@@ -207,7 +207,7 @@ AVATAR_MAX_DIMENSION = 4096  # pixels, per side
 AVATAR_CACHE_CONTROL = "public, max-age=300, s-maxage=86400"
 
 # ---------------------------------------------------------------------------
-# CDN invalidation (implemented in Step 6)
+# CDN invalidation
 # ---------------------------------------------------------------------------
 AVATAR_BASE_URL = os.environ.get("AVATAR_BASE_URL", "")
 INVALIDATION_BACKEND = os.environ.get("INVALIDATION_BACKEND", "log")
@@ -320,5 +320,5 @@ LOGGING = {
     },
 }
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"

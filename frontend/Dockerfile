@@ -1,13 +1,56 @@
-FROM node:22-alpine
+
+# --------------------------------------------------
+# Development stage
+# --------------------------------------------------
+FROM node:22-alpine AS development
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install
+# Install dependencies first for better Docker layer caching
+COPY package.json package-lock.json ./
 
+RUN npm ci
+
+# Copy application source
 COPY . .
 
 EXPOSE 5173
 
-# Vite dev server with hot reload (the source is mounted by docker compose).
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--strictPort"]
+
+
+# --------------------------------------------------
+# Build stage
+# --------------------------------------------------
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
+
+# These values are embedded in the generated frontend bundle.
+ARG VITE_API_URL
+ARG VITE_AVATAR_BASE_URL
+
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_AVATAR_BASE_URL=${VITE_AVATAR_BASE_URL}
+
+RUN npm run build
+
+
+# --------------------------------------------------
+# Production stage
+# --------------------------------------------------
+FROM nginx:stable-alpine AS production
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

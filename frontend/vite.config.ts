@@ -3,10 +3,17 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+
   server: {
-    host: true,
+    host: "0.0.0.0",
     port: 5173,
-    // File watching through Docker bind mounts is unreliable on some systems, so poll.
-    watch: { usePolling: true },
+    strictPort: true,
+
+    // Useful when frontend source is mounted from the host
+    // into a Docker container.
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
   },
 });

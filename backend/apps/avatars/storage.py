@@ -84,19 +84,32 @@ def presigned_get_url(key, expires=3600):
 
 # ---- reading and writing ----
 def read_object(key, max_bytes):
-    """Returns the object's bytes. Raises ObjectNotFound or ObjectTooLarge (never reads more than max_bytes)."""
+    """Returns the object's bytes, without reading more than max_bytes."""
     client = _client()
+
     try:
         head = client.head_object(Bucket=bucket(), Key=key)
     except ClientError as exc:
-        if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey", "NotFound"):
+        if exc.response.get("Error", {}).get("Code") in (
+            "404", "NoSuchKey", "NotFound"
+        ):
             raise ObjectNotFound(key) from exc
         raise
+
     if head["ContentLength"] > max_bytes:
         raise ObjectTooLarge(key)
-    data = client.get_object(Bucket=bucket(), Key=key)["Body"].read(max_bytes + 1)
+
+    response = client.get_object(Bucket=bucket(), Key=key)
+    body = response["Body"]
+
+    try:
+        data = body.read(max_bytes + 1)
+    finally:
+        body.close()
+
     if len(data) > max_bytes:
         raise ObjectTooLarge(key)
+
     return data
 
 

@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 import s3_common as s3c
 
 BUCKET = os.environ["AWS_STORAGE_BUCKET_NAME"]
-ORIGINS = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
+ORIGINS = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:8080").split(",") if o.strip()]
 
 
 def ensure_bucket(client):

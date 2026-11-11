@@ -50,17 +50,27 @@ function Stage({
   onUseDefault: () => void;
   busy: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState("");
 
-  const snippet = `<img src="${avatarUrl(emailHash, 160)}" width="80" height="80" alt="">`;
+  // Generate an absolute URL so it can be shared outside this application.
+  const imageUrl = new URL(
+    avatarUrl(emailHash, 160, version),
+    AVATAR_BASE_URL || window.location.origin // second parameter is ignored if the first is absolute, but it is needed for relative URLs in dev
+  ).toString();
 
-  async function copy() {
+  // HTML snippet for embedding the avatar on another website.
+  const snippet = `<img src="${imageUrl}" width="160" height="160" alt="Profile picture">`;
+
+  async function copyText(value: string) {
     try {
-      await navigator.clipboard.writeText(snippet);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(value);
+      setCopied(value);
+
+      window.setTimeout(() => {
+        setCopied((previous) => (previous === value ? "" : previous));
+      }, 2000);
     } catch {
-      // Clipboard access can be blocked; the text is selectable, so nothing else to do.
+      // Clipboard access can be blocked by the browser.
     }
   }
 
@@ -77,6 +87,7 @@ function Stage({
               }
               alt={current ? "Your current picture" : "The default picture"}
             />
+
             {current && <span className="tag">Current</span>}
           </div>
 
@@ -117,23 +128,52 @@ function Stage({
             ))}
           </div>
 
+          {/* Public image URL */}
           <div className="snippet">
-            <code aria-label="HTML for showing this picture">{snippet}</code>
+            <div>
+              <strong>Public image URL</strong>
+              <p className="small">
+                Share this link or use it directly in another application.
+              </p>
+            </div>
+
+            <code>{imageUrl}</code>
 
             <button
               type="button"
               className="btn btn--secondary btn--small"
-              onClick={() => void copy()}
+              onClick={() => void copyText(imageUrl)}
             >
-              {copied ? "Copied" : "Copy"}
+              {copied === imageUrl ? "Copied!" : "Copy URL"}
+            </button>
+          </div>
+
+          {/* HTML embed code */}
+          <div className="snippet">
+            <div>
+              <strong>HTML embed code</strong>
+              <p className="small">
+                Paste this into another website to display your picture.
+              </p>
+            </div>
+
+            <code>{snippet}</code>
+
+            <button
+              type="button"
+              className="btn btn--secondary btn--small"
+              onClick={() => void copyText(snippet)}
+            >
+              {copied === snippet ? "Copied!" : "Copy HTML"}
             </button>
           </div>
 
           <p className="small" style={{ marginTop: "0.8rem" }}>
-            Any app can build this address from your email: lowercase it, take
-            its SHA-256, and put the result after{" "}
-            <code>{AVATAR_BASE_URL}/avatar/</code>. Your hash is{" "}
-            <code>{emailHash.slice(0, 12)}...</code>
+            Other applications can generate your avatar URL using your
+            email address: lowercase the email, calculate its SHA-256 hash,
+            and append it to{" "}
+            <code>{new URL("/avatar/", window.location.origin).toString()}</code>.
+            Your hash is <code>{emailHash.slice(0, 12)}...</code>.
           </p>
         </div>
       </div>

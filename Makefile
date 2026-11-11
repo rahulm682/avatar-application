@@ -1,54 +1,88 @@
-.PHONY: up down logs ps setup bucket app-key smoke reset migrations migrate superuser test test-s3 shell cleanup
+COMPOSE = docker compose -f compose.yaml -f compose.dev.yaml
 
-up:            ## start everything (build if needed)
-	docker compose up --build -d
+.PHONY: up down logs ps config setup bucket app-key smoke \
+        migrations migrate superuser test test-s3 shell cleanup reset
 
-down:          ## stop everything (keeps data)
-	docker compose down
+# --------------------------------------------------
+# Development environment
+# --------------------------------------------------
 
-logs:          ## follow logs
-	docker compose logs -f --tail=100
+up: ## Build and start the development environment
+	$(COMPOSE) up --build -d
 
-ps:            ## show service status
-	docker compose ps
+down: ## Stop the development environment (keeps data)
+	$(COMPOSE) down
 
-bucket:        ## create bucket + CORS + lifecycle rules in Silo
-	docker compose run --rm silo-init
+logs: ## Follow logs from all services
+	$(COMPOSE) logs -f --tail=100
 
-app-key:       ## create the application's restricted access key in Silo
-	docker compose exec silo sh /scripts/create_app_key.sh
+ps: ## Show service status
+	$(COMPOSE) ps
 
-smoke:         ## run the S3 smoke test
-	docker compose run --rm silo-init python /scripts/smoke_test.py
+config: ## Validate the merged development Compose configuration
+	$(COMPOSE) config
 
-setup:         ## first-time setup: bucket, app key, smoke test
-	docker compose up -d --build db silo
+# --------------------------------------------------
+# Silo setup
+# --------------------------------------------------
+
+bucket: ## Create the Silo bucket, CORS and lifecycle rules
+	$(COMPOSE) run --rm silo-init
+
+app-key: ## Create the application's restricted Silo access key
+	$(COMPOSE) exec silo sh /scripts/create_app_key.sh
+
+smoke: ## Run the S3 integration smoke test against Silo
+	$(COMPOSE) run --rm --entrypoint python silo-init /scripts/smoke_test.py
+
+setup: ## First-time setup: start dependencies, configure Silo and test it
+	$(COMPOSE) up -d --build db silo
 	$(MAKE) bucket
 	$(MAKE) app-key
 	$(MAKE) smoke
 
-migrations:    ## generate Django migration files after model changes
-	docker compose exec backend python manage.py makemigrations
+# --------------------------------------------------
+# Django database
+# --------------------------------------------------
 
-migrate:       ## apply database migrations
-	docker compose exec backend python manage.py migrate
+migrations: ## Generate Django migration files after model changes
+	$(COMPOSE) exec backend python manage.py makemigrations
 
-superuser:     ## create an admin user (asks for email and password)
-	docker compose exec backend python manage.py createsuperuser
+migrate: ## Apply Django database migrations
+	$(COMPOSE) exec backend python manage.py migrate
 
-test:          ## run the backend tests
-	docker compose exec backend python manage.py test
+superuser: ## Create a Django admin user
+	$(COMPOSE) exec backend python manage.py createsuperuser
 
-test-s3:       ## run the opt-in tests against the real Silo server
-	docker compose exec -e RUN_S3_TESTS=1 backend python manage.py test apps.avatars.test_s3_integration
+# --------------------------------------------------
+# Tests
+# --------------------------------------------------
 
-cleanup:       ## run the housekeeping commands once, right now
-	docker compose exec backend python manage.py cleanup_unverified
-	docker compose exec backend python manage.py flushexpiredtokens
-	docker compose exec backend python manage.py purge_deleted
+test: ## Run Django backend tests
+	$(COMPOSE) exec backend python manage.py test
 
-shell:         ## open a Django shell in the backend container
-	docker compose exec backend python manage.py shell
+test-s3: ## Run opt-in tests against the real Silo server
+	$(COMPOSE) exec -e RUN_S3_TESTS=1 backend python manage.py test apps.avatars.test_s3_integration
 
-reset:         ## DANGER: stop everything and delete all local data volumes
-	docker compose down -v
+# --------------------------------------------------
+# Maintenance
+# --------------------------------------------------
+
+cleanup: ## Run Django housekeeping commands once
+	$(COMPOSE) exec backend python manage.py cleanup_unverified
+	$(COMPOSE) exec backend python manage.py flushexpiredtokens
+	$(COMPOSE) exec backend python manage.py purge_deleted
+
+# --------------------------------------------------
+# Django shell
+# --------------------------------------------------
+
+shell: ## Open the Django shell
+	$(COMPOSE) exec backend python manage.py shell
+
+# --------------------------------------------------
+# Reset
+# --------------------------------------------------
+
+reset: ## DANGER: Stop services and delete all local Docker volumes
+	$(COMPOSE) down -v
